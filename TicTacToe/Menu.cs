@@ -96,6 +96,11 @@ namespace TicTacToe
                 Console.WriteLine("Enter second player username:");
 
                 string secondName = Console.ReadLine();
+                while (secondName == "")
+                {
+                    Console.WriteLine("Username cannot be empty!");
+                    secondName = Console.ReadLine();
+                }
 
                 player2 = new Player(secondName, secondSymbol);
             }
