@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,52 +10,41 @@ namespace TicTacToe
     internal class Game
     {
         private Board board;
+        private Random random;
 
         private Player player1;
         private Player player2;
-        private Player currentPlayer;
-
-        private int selectedRow = 0;
-        private int selectedCol = 0;
-
-        public Game(Player p1, Player p2)
+        public Game()
         {
             board = new Board();
-
-            player1 = p1;
-            player2 = p2;
-
-            if (player1.Symbol == 'X')
-            {
-                currentPlayer = player1;
-            }
-            else
-            {
-                currentPlayer = player2;
-            }
+            random = new Random();
         }
-        private void SwitchPlayer()
-        {
-            if (currentPlayer == player1)
-            {
-                currentPlayer = player2;
-            }
-            else
-            {
-                currentPlayer = player1;
-            }
-        }
+        
         public void Start()
         {
+            int selectedRow = 1;
+            int selectedCol = 1;
+            player1 = new Player(GameSession.Username, GameSession.PlayerSymbol);
+            char p2Symbol = (player1.Symbol == 'X') ? '0' : 'X';
+            player2 = new Player(GameSession.Player2Username, p2Symbol);
+            board = new Board();
+            Player currentPlayer = (player1.Symbol == 'X') ? player1 : player2;
+
             while (true)
             {
                 board.Draw(selectedRow, selectedCol);
+                Console.WriteLine($"Current Turn: {currentPlayer.Username} ({currentPlayer.Symbol})");
+                Console.WriteLine("Use Arrow Keys (↑, ↓, ←, →) to navigate, Enter to place symbol.");
+                if (GameSession.IsVsComputer && currentPlayer == player2)
+                {
+                    System.Threading.Thread.Sleep(700);
+                    MakeComputerMove(player2.Symbol);
 
-                Console.WriteLine();
-                Console.WriteLine(currentPlayer.Username + "'s turn");
-                Console.WriteLine("Use WASD or Arrow Keys");
-                Console.WriteLine("Press Enter to place mark");
+                    if (CheckGameStatus(currentPlayer)) break;
 
+                    currentPlayer = player1;
+                    continue;
+                }
                 ConsoleKeyInfo key = Console.ReadKey(true);
 
                 // UP
@@ -100,44 +90,51 @@ namespace TicTacToe
                 // ENTER -> PLACE MARK
                 else if (key.Key == ConsoleKey.Enter)
                 {
-                    bool success = board.PlaceMark(selectedRow, selectedCol, currentPlayer.Symbol);
-
-                    // Occupied cell
-                    if (!success)
+                    if (board.PlaceMark(selectedRow, selectedCol, currentPlayer.Symbol))
                     {
-                        continue;
+                        if (CheckGameStatus(currentPlayer)) break;
+                        currentPlayer = (currentPlayer == player1) ? player2 : player1;
                     }
-
-                    // Winner
-                    if (board.CheckWinner(currentPlayer.Symbol))
-                    {
-                        board.Draw(selectedRow, selectedCol);
-
-                        Console.WriteLine();
-                        Console.WriteLine(currentPlayer.Username + " wins!");
-
-                        break;
-                    }
-
-                    // Draw
-                    if (board.IsFull())
-                    {
-                        board.Draw(selectedRow, selectedCol);
-
-                        Console.WriteLine();
-                        Console.WriteLine("Draw!");
-
-                        break;
-                    }
-
-                    // Next turn
-                    SwitchPlayer();
                 }
             }
-
-            Console.WriteLine();
-            Console.WriteLine("Press any key to continue...");
+            Console.WriteLine("\nPress any key to return to Main Menu...");
             Console.ReadKey();
+        }
+
+        public void MakeComputerMove(char computerSymbol)
+        {
+            bool moved = false;
+            while (!moved && !board.IsFull())
+            {
+                int r = random.Next(0, 3);
+                int c = random.Next(0, 3);
+                if (board.PlaceMark(r, c, computerSymbol))
+                {
+                    moved = true;
+                }
+            }
+        }
+
+        private bool CheckGameStatus(Player player)
+        {
+            if (board.CheckWinner(player.Symbol))
+            {
+                board.Draw(-1, -1);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"\n{player.Username} ({player.Symbol}) WINS!");
+                Console.ResetColor();
+                return true;
+            }
+            if (board.IsFull())
+            {
+                board.Draw(-1, -1);
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("\nIt's a Draw! No one wins.");
+                Console.ResetColor();
+                return true;
+            }
+
+            return false;
         }
     }
 }
